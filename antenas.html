@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visualizador de Patrones de Radiación de Antenas</title>
+
+  <style>
+    :root{
+      --primary-color:#0a2463;
+      --secondary-color:#1e3888;
+      --accent-color:#3e92cc;
+      --light-accent:#76b5c5;
+      --background-gradient:linear-gradient(135deg,#0a2463 0%,#000 100%);
+      --card-bg:rgba(10,36,99,.7);
+      --text-color:#fff;
+      --border-radius:12px;
+      --transition-speed:.25s;
+    }
+
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      background:var(--background-gradient);
+      color:var(--text-color);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      padding:1.5rem;
+      text-align:center;
+      background-color:rgba(0,0,0,.3);
+      box-shadow:0 4px 6px rgba(0,0,0,.2);
+    }
+    header h1{
+      font-size:2rem;
+      margin-bottom:.5rem;
+      background:linear-gradient(90deg,#fff,#76b5c5);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+
+    main{
+      flex:1;
+      display:grid;
+      grid-template-columns:300px 1fr;
+      grid-template-areas:
+        "controls visualizations"
+        "results results";
+      gap:1.5rem;
+      padding:1.5rem;
+      max-width:1400px;
+      margin:0 auto;
+      width:100%;
+    }
+
+    aside{
+      grid-area:controls;
+      background-color:var(--card-bg);
+      border-radius:var(--border-radius);
+      padding:1.5rem;
+      box-shadow:0 8px 16px rgba(0,0,0,.3);
+      height:fit-content;
+    }
+
+    .antenna-selector{ margin-bottom:1.5rem; }
+    .antenna-selector h2{
+      margin-bottom:1rem;
+      font-size:1.2rem;
+      color:var(--light-accent);
+    }
+
+    .radio-group{
+      display:flex;
+      flex-direction:column;
+      gap:.8rem;
+    }
+    .radio-option{
+      display:flex;
+      align-items:center;
+      cursor:pointer;
+      padding:.5rem;
+      border-radius:8px;
+      transition: background-color var(--transition-speed);
+    }
+    .radio-option:hover{ background-color:rgba(62,146,204,.2); }
+    .radio-option input[type="radio"]{
+      margin-right:.8rem;
+      width:18px;
+      height:18px;
+      accent-color:var(--accent-color);
+      cursor:pointer;
+    }
+
+    .control-group{
+      margin-bottom:1.5rem;
+      opacity:0;
+      max-height:0;
+      overflow:hidden;
+      transition:opacity var(--transition-speed), max-height var(--transition-speed);
+    }
+    .control-group.active{
+      opacity:1;
+      max-height:600px;
+    }
+    .control-group h3{
+      margin-bottom:1rem;
+      font-size:1.1rem;
+      color:var(--light-accent);
+    }
+
+    .control-item{ margin-bottom:1rem; position:relative; }
+    .control-item label{ display:block; margin-bottom:.5rem; font-size:.9rem; }
+
+    .slider-container{
+      display:flex;
+      align-items:center;
+      gap:.8rem;
+    }
+    input[type="range"]{
+      flex:1;
+      height:6px;
+      border-radius:3px;
+      background:linear-gradient(to right,#3e92cc,#76b5c5);
+      outline:none;
+      -webkit-appearance:none;
+      cursor:pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:#fff;
+      cursor:pointer;
+      box-shadow:0 2px 4px rgba(0,0,0,.3);
+    }
+    input[type="range"]::-moz-range-thumb{
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:#fff;
+      cursor:pointer;
+      box-shadow:0 2px 4px rgba(0,0,0,.3);
+    }
+
+    .value-display{
+      min-width:70px;
+      text-align:center;
+      background-color:rgba(255,255,255,.1);
+      padding:.3rem;
+      border-radius:6px;
+      font-weight:700;
+    }
+
+    .visualization-container{
+      grid-area:visualizations;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:auto auto;
+      gap:1.5rem;
+    }
+
+    .visualization-panel{
+      background-color:var(--card-bg);
+      border-radius:var(--border-radius);
+      padding:1.5rem;
+      box-shadow:0 8px 16px rgba(0,0,0,.3);
+      display:flex;
+      flex-direction:column;
+    }
+
+    .panel-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:1rem;
+      gap:1rem;
+      flex-wrap:wrap;
+    }
+    .panel-header h2{ font-size:1.2rem; color:var(--light-accent); }
+
+    .view-options{ display:flex; gap:.5rem; }
+    .view-option{
+      padding:.3rem .6rem;
+      background-color:rgba(255,255,255,.1);
+      border:none;
+      border-radius:6px;
+      color:var(--text-color);
+      cursor:pointer;
+      transition: background-color var(--transition-speed);
+    }
+    .view-option.active{ background-color:var(--accent-color); }
+    .view-option:hover{ background-color:rgba(62,146,204,.7); }
+
+    .canvas-container{
+      position:relative;
+      flex:1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background-color:rgba(0,0,0,.2);
+      border-radius:8px;
+      overflow:hidden;
+    }
+
+    canvas{ max-width:100%; max-height:100%; }
+
+    .results-panel{
+      grid-area:results;
+      background-color:var(--card-bg);
+      border-radius:var(--border-radius);
+      padding:1.5rem;
+      box-shadow:0 8px 16px rgba(0,0,0,.3);
+    }
+    .results-panel h2{
+      font-size:1.2rem;
+      margin-bottom:1rem;
+      color:var(--light-accent);
+    }
+    .results-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:1rem;
+    }
+    .result-item{
+      background-color:rgba(255,255,255,.1);
+      padding:1rem;
+      border-radius:8px;
+    }
+    .result-label{ font-size:.9rem; color:var(--light-accent); margin-bottom:.5rem; }
+    .result-value{ font-size:1.5rem; font-weight:800; }
+
+    .action-buttons{
+      display:flex;
+      justify-content:flex-end;
+      margin-top:1rem;
+      gap:1rem;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      padding:.8rem 1.5rem;
+      background-color:var(--accent-color);
+      border:none;
+      border-radius:8px;
+      color:#fff;
+      font-weight:800;
+      cursor:pointer;
+      transition: background-color var(--transition-speed);
+    }
+    .btn:hover{ background-color:var(--secondary-color); }
+
+    .color-legend{
+      margin-top:1rem;
+      height:20px;
+      border-radius:10px;
+      background:linear-gradient(to right,#00f,#0ff,#0f0,#ff0,#f00);
+    }
+    .legend-labels{
+      display:flex;
+      justify-content:space-between;
+      margin-top:.5rem;
+      font-size:.8rem;
+      opacity:.85;
+    }
+
+    footer{
+      background-color:rgba(0,0,0,.3);
+      padding:1.5rem;
+      text-align:center;
+    }
+    footer h3{ margin-bottom:1rem; color:var(--light-accent); }
+    footer p{ margin-bottom:.8rem; line-height:1.6; }
+
+    footer a{
+      color:var(--accent-color);
+      text-decoration:none;
+      transition: color var(--transition-speed);
+    }
+    footer a:hover{
+      color:var(--light-accent);
+      text-decoration:underline;
+    }
+
+    .resources{
+      display:flex;
+      justify-content:center;
+      flex-wrap:wrap;
+      gap:1rem;
+      margin-top:1rem;
+    }
+    .resource-link{
+      padding:.5rem 1rem;
+      background-color:rgba(62,146,204,.2);
+      border-radius:6px;
+      transition: background-color var(--transition-speed);
+    }
+    .resource-link:hover{ background-color:rgba(62,146,204,.4); }
+
+    /* Tooltip */
+    .control-item::after{
+      content: attr(data-tooltip);
+      position:absolute;
+      bottom:100%;
+      left:50%;
+      transform:translateX(-50%);
+      background-color:rgba(0,0,0,.85);
+      color:#fff;
+      padding:.3rem .6rem;
+      border-radius:4px;
+      font-size:.8rem;
+      white-space:nowrap;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .2s;
+    }
+    .control-item:hover::after{ opacity:1; }
+
+    /* Focus accesible */
+    :focus-visible{
+      outline:2px solid rgba(118,181,197,.9);
+      outline-offset:2px;
+      border-radius:8px;
+    }
+
+    @media (max-width:768px){
+      main{
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "controls"
+          "visualizations"
+          "results";
+      }
+      .visualization-container{ grid-template-columns:1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ transition:none !important; scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Visualizador de Patrones de Radiación de Antenas</h1>
+    <p>Herramienta educativa para analizar patrones de radiación de antenas básicas en telecomunicaciones</p>
+  </header>
+
+  <main>
+    <aside aria-label="Panel de controles">
+      <section class="antenna-selector" aria-labelledby="tipo-antena-title">
+        <h2 id="tipo-antena-title">Tipo de Antena</h2>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="antenna-type" value="dipole" checked />
+            <span>Dipolo Simple</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="antenna-type" value="monopole" />
+            <span>Monopolo</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="antenna-type" value="array" />
+            <span>Arreglo de Dos Elementos</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="antenna-type" value="yagi" />
+            <span>Antena Yagi Simplificada</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="control-group active" id="dipole-controls" aria-labelledby="dipole-title">
+        <h3 id="dipole-title">Parámetros del Dipolo</h3>
+        <div class="control-item" data-tooltip="Longitud del dipolo en longitudes de onda">
+          <label for="dipole-length">Longitud (λ):</label>
+          <div class="slider-container">
+            <input type="range" id="dipole-length" min="0.1" max="1" step="0.01" value="0.5" />
+            <div class="value-display" id="dipole-length-value">0.50</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-group" id="monopole-controls" aria-labelledby="monopole-title">
+        <h3 id="monopole-title">Parámetros del Monopolo</h3>
+        <div class="control-item" data-tooltip="Longitud del monopolo en longitudes de onda">
+          <label for="monopole-length">Longitud (λ):</label>
+          <div class="slider-container">
+            <input type="range" id="monopole-length" min="0.1" max="0.5" step="0.01" value="0.25" />
+            <div class="value-display" id="monopole-length-value">0.25</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-group" id="array-controls" aria-labelledby="array-title">
+        <h3 id="array-title">Parámetros del Arreglo</h3>
+
+        <div class="control-item" data-tooltip="Distancia entre elementos del arreglo">
+          <label for="element-spacing">Separación entre elementos (λ):</label>
+          <div class="slider-container">
+            <input type="range" id="element-spacing" min="0.1" max="1" step="0.01" value="0.5" />
+            <div class="value-display" id="element-spacing-value">0.50</div>
+          </div>
+        </div>
+
+        <div class="control-item" data-tooltip="Diferencia de fase entre elementos">
+          <label for="phase-difference">Diferencia de fase (°):</label>
+          <div class="slider-container">
+            <input type="range" id="phase-difference" min="0" max="180" step="1" value="0" />
+            <div class="value-display" id="phase-difference-value">0°</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-group" id="yagi-controls" aria-labelledby="yagi-title">
+        <h3 id="yagi-title">Parámetros de la Antena Yagi</h3>
+
+        <div class="control-item" data-tooltip="Número de elementos directores">
+          <label for="director-elements">Número de elementos directores:</label>
+          <div class="slider-container">
+            <input type="range" id="director-elements" min="1" max="10" step="1" value="3" />
+            <div class="value-display" id="director-elements-value">3</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="action-buttons">
+        <button class="btn" type="button" id="reset-btn">Restablecer Valores</button>
+        <button class="btn" type="button" id="screenshot-btn">Capturar Pantalla</button>
+      </div>
+    </aside>
+
+    <section class="visualization-container" aria-label="Panel de visualizaciones">
+      <div class="visualization-panel" data-panel="azimuth">
+        <div class="panel-header">
+          <h2>Patrón de Radiación - Plano Azimutal</h2>
+          <div class="view-options" role="group" aria-label="Modo de vista azimutal">
+            <button class="view-option active" type="button" data-view="gain">Ganancia (dBi)</button>
+            <button class="view-option" type="button" data-view="power">Potencia Normalizada</button>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="azimuth-pattern" width="400" height="400" aria-label="Patrón azimutal"></canvas>
+        </div>
+        <div class="color-legend" aria-hidden="true"></div>
+        <div class="legend-labels" aria-hidden="true">
+          <span>-40 dB</span><span>-20 dB</span><span>0 dB</span><span>20 dB</span><span>40 dB</span>
+        </div>
+      </div>
+
+      <div class="visualization-panel" data-panel="elevation">
+        <div class="panel-header">
+          <h2>Patrón de Radiación - Plano de Elevación</h2>
+          <div class="view-options" role="group" aria-label="Modo de vista elevación">
+            <button class="view-option active" type="button" data-view="gain">Ganancia (dBi)</button>
+            <button class="view-option" type="button" data-view="power">Potencia Normalizada</button>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="elevation-pattern" width="400" height="400" aria-label="Patrón de elevación"></canvas>
+        </div>
+        <div class="color-legend" aria-hidden="true"></div>
+        <div class="legend-labels" aria-hidden="true">
+          <span>-40 dB</span><span>-20 dB</span><span>0 dB</span><span>20 dB</span><span>40 dB</span>
+        </div>
+      </div>
+
+      <div class="visualization-panel" style="grid-column:1 / -1;" data-panel="3d">
+        <div class="panel-header">
+          <h2>Visualización 3D del Patrón de Radiación</h2>
+          <div class="view-options" role="group" aria-label="Modo de vista 3D">
+            <button class="view-option active" type="button" data-view="gain">Ganancia (dBi)</button>
+            <button class="view-option" type="button" data-view="power">Potencia Normalizada</button>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="3d-pattern" width="800" height="400" aria-label="Patrón 3D"></canvas>
+        </div>
+        <div class="color-legend" aria-hidden="true"></div>
+        <div class="legend-labels" aria-hidden="true">
+          <span>-40 dB</span><span>-20 dB</span><span>0 dB</span><span>20 dB</span><span>40 dB</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-panel" aria-label="Resultados calculados">
+      <h2>Parámetros de la Antena</h2>
+      <div class="results-grid" aria-live="polite">
+        <div class="result-item">
+          <div class="result-label">Ganancia Directiva</div>
+          <div class="result-value" id="gain-value">2.15 dBi</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Ancho del Haz (3dB)</div>
+          <div class="result-value" id="beamwidth-value">78°</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Relación Frente-Espalda</div>
+          <div class="result-value" id="fb-ratio-value">20 dB</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Eficiencia de Radiación</div>
+          <div class="result-value" id="efficiency-value">95%</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <h3>Conceptos Básicos de Antenas</h3>
+    <p>Las antenas convierten energía eléctrica en ondas electromagnéticas y viceversa. El patrón de radiación describe la dirección e intensidad de la energía radiada.</p>
+    <p>La ganancia indica la capacidad de dirigir energía en una dirección en comparación con una antena isotrópica.</p>
+
+    <div class="resources">
+      <a href="https://www.antenna-theory.com/" target="_blank" rel="noopener" class="resource-link">Teoría de Antenas</a>
+      <a href="https://www.ece.rutgers.edu/~orfanidi/ewa/" target="_blank" rel="noopener" class="resource-link">Electromagnética y Antenas</a>
+      <a href="https://www.itu.int/en/Pages/default.aspx" target="_blank" rel="noopener" class="resource-link">UIT - Recursos</a>
+    </div>
+  </footer>
+
+  <script>
+    // ========= Estado =========
+    const appState = {
+      antennaType: "dipole",
+      viewMode: "gain", // global: gain | power
+      dipoleLength: 0.5,
+      monopoleLength: 0.25,
+      elementSpacing: 0.5,
+      phaseDifference: 0,
+      directorElements: 3
+    };
+
+    // ========= DOM =========
+    const elements = {
+      antennaTypeRadios: document.querySelectorAll('input[name="antenna-type"]'),
+      controlGroups: document.querySelectorAll(".control-group"),
+
+      resetBtn: document.getElementById("reset-btn"),
+      screenshotBtn: document.getElementById("screenshot-btn"),
+
+      azimuthCanvas: document.getElementById("azimuth-pattern"),
+      elevationCanvas: document.getElementById("elevation-pattern"),
+      pattern3DCanvas: document.getElementById("3d-pattern"),
+
+      gainValue: document.getElementById("gain-value"),
+      beamwidthValue: document.getElementById("beamwidth-value"),
+      fbRatioValue: document.getElementById("fb-ratio-value"),
+      efficiencyValue: document.getElementById("efficiency-value"),
+
+      sliders: {
+        dipole: {
+          el: document.getElementById("dipole-length"),
+          out: document.getElementById("dipole-length-value"),
+          format: v => v.toFixed(2),
+          set: v => (appState.dipoleLength = v)
+        },
+        monopole: {
+          el: document.getElementById("monopole-length"),
+          out: document.getElementById("monopole-length-value"),
+          format: v => v.toFixed(2),
+          set: v => (appState.monopoleLength = v)
+        },
+        spacing: {
+          el: document.getElementById("element-spacing"),
+          out: document.getElementById("element-spacing-value"),
+          format: v => v.toFixed(2),
+          set: v => (appState.elementSpacing = v)
+        },
+        phase: {
+          el: document.getElementById("phase-difference"),
+          out: document.getElementById("phase-difference-value"),
+          format: v => `${v}°`,
+          set: v => (appState.phaseDifference = v)
+        },
+        directors: {
+          el: document.getElementById("director-elements"),
+          out: document.getElementById("director-elements-value"),
+          format: v => String(v),
+          set: v => (appState.directorElements = v)
+        }
+      },
+
+      panels: document.querySelectorAll(".visualization-panel")
+    };
+
+    const azimuthCtx = elements.azimuthCanvas.getContext("2d");
+    const elevationCtx = elements.elevationCanvas.getContext("2d");
+    const pattern3DCtx = elements.pattern3DCanvas.getContext("2d");
+
+    // ========= Init =========
+    document.addEventListener("DOMContentLoaded", () => {
+      setupEventListeners();
+      updateVisualization();
+    });
+
+    // ========= Eventos =========
+    function setupEventListeners() {
+      elements.antennaTypeRadios.forEach(radio => {
+        radio.addEventListener("change", handleAntennaTypeChange);
+      });
+
+      // Sliders (genérico)
+      Object.values(elements.sliders).forEach(s => {
+        s.el.addEventListener("input", () => {
+          const raw = s.el.value;
+          const value = raw.includes(".") ? parseFloat(raw) : parseInt(raw, 10);
+          s.out.textContent = s.format(value);
+          s.set(value);
+          updateVisualization();
+        });
+      });
+
+      // View mode (por panel)
+      elements.panels.forEach(panel => {
+        const buttons = panel.querySelectorAll(".view-option");
+        buttons.forEach(btn => {
+          btn.addEventListener("click", () => {
+            buttons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            // Esta demo usa viewMode global (si quieres por panel, lo hago también)
+            appState.viewMode = btn.dataset.view;
+            updateVisualization();
+          });
+        });
+      });
+
+      elements.resetBtn.addEventListener("click", resetValues);
+      elements.screenshotBtn.addEventListener("click", captureScreenshot);
+    }
+
+    function handleAntennaTypeChange(e) {
+      appState.antennaType = e.target.value;
+
+      elements.controlGroups.forEach(g => g.classList.remove("active"));
+      const group = document.getElementById(`${appState.antennaType}-controls`);
+      if (group) group.classList.add("active");
+
+      updateVisualization();
+    }
+
+    function resetValues() {
+      appState.dipoleLength = 0.5;
+      appState.monopoleLength = 0.25;
+      appState.elementSpacing = 0.5;
+      appState.phaseDifference = 0;
+      appState.directorElements = 3;
+
+      elements.sliders.dipole.el.value = 0.5;
+      elements.sliders.dipole.out.textContent = "0.50";
+
+      elements.sliders.monopole.el.value = 0.25;
+      elements.sliders.monopole.out.textContent = "0.25";
+
+      elements.sliders.spacing.el.value = 0.5;
+      elements.sliders.spacing.out.textContent = "0.50";
+
+      elements.sliders.phase.el.value = 0;
+      elements.sliders.phase.out.textContent = "0°";
+
+      elements.sliders.directors.el.value = 3;
+      elements.sliders.directors.out.textContent = "3";
+
+      updateVisualization();
+    }
+
+    // ========= Render =========
+    function updateVisualization() {
+      clearCanvas(azimuthCtx, elements.azimuthCanvas);
+      clearCanvas(elevationCtx, elements.elevationCanvas);
+      clearCanvas(pattern3DCtx, elements.pattern3DCanvas);
+
+      switch (appState.antennaType) {
+        case "dipole":
+          drawDipolePattern();
+          calculateDipoleParameters();
+          break;
+        case "monopole":
+          drawMonopolePattern();
+          calculateMonopoleParameters();
+          break;
+        case "array":
+          drawArrayPattern();
+          calculateArrayParameters();
+          break;
+        case "yagi":
+          drawYagiPattern();
+          calculateYagiParameters();
+          break;
+      }
+    }
+
+    function clearCanvas(ctx, canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawDipolePattern() {
+      const { centerX, centerY, maxRadius } = canvasGeometry(elements.azimuthCanvas);
+      drawConcentricCircles(azimuthCtx, centerX, centerY, maxRadius);
+      drawConcentricCircles(elevationCtx, centerX, centerY, maxRadius);
+
+      const patternData = calculateDipolePattern(appState.dipoleLength);
+      drawPolarPattern(azimuthCtx, centerX, centerY, maxRadius, patternData.azimuth);
+      drawPolarPattern(elevationCtx, centerX, centerY, maxRadius, patternData.elevation);
+      draw3DPattern(patternData);
+    }
+
+    function drawMonopolePattern() {
+      const { centerX, centerY, maxRadius } = canvasGeometry(elements.azimuthCanvas);
+      drawConcentricCircles(azimuthCtx, centerX, centerY, maxRadius);
+      drawConcentricCircles(elevationCtx, centerX, centerY, maxRadius);
+
+      const patternData = calculateMonopolePattern(appState.monopoleLength);
+      drawPolarPattern(azimuthCtx, centerX, centerY, maxRadius, patternData.azimuth);
+      drawPolarPattern(elevationCtx, centerX, centerY, maxRadius, patternData.elevation);
+      draw3DPattern(patternData);
+    }
+
+    function drawArrayPattern() {
+      const { centerX, centerY, maxRadius } = canvasGeometry(elements.azimuthCanvas);
+      drawConcentricCircles(azimuthCtx, centerX, centerY, maxRadius);
+      drawConcentricCircles(elevationCtx, centerX, centerY, maxRadius);
+
+      const spacing = appState.elementSpacing;
+      const phaseDiff = (appState.phaseDifference * Math.PI) / 180;
+      const patternData = calculateArrayPattern(spacing, phaseDiff);
+      drawPolarPattern(azimuthCtx, centerX, centerY, maxRadius, patternData.azimuth);
+      drawPolarPattern(elevationCtx, centerX, centerY, maxRadius, patternData.elevation);
+      draw3DPattern(patternData);
+    }
+
+    function drawYagiPattern() {
+      const { centerX, centerY, maxRadius } = canvasGeometry(elements.azimuthCanvas);
+      drawConcentricCircles(azimuthCtx, centerX, centerY, maxRadius);
+      drawConcentricCircles(elevationCtx, centerX, centerY, maxRadius);
+
+      const patternData = calculateYagiPattern(appState.directorElements);
+      drawPolarPattern(azimuthCtx, centerX, centerY, maxRadius, patternData.azimuth);
+      drawPolarPattern(elevationCtx, centerX, centerY, maxRadius, patternData.elevation);
+      draw3DPattern(patternData);
+    }
+
+    function canvasGeometry(canvas) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const maxRadius = Math.min(centerX, centerY) - 20;
+      return { centerX, centerY, maxRadius };
+    }
+
+    function drawConcentricCircles(ctx, centerX, centerY, maxRadius) {
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 1;
+
+      for (let i = 1; i <= 5; i++) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, (maxRadius / 5) * i, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(centerX - maxRadius, centerY);
+      ctx.lineTo(centerX + maxRadius, centerY);
+      ctx.moveTo(centerX, centerY - maxRadius);
+      ctx.lineTo(centerX, centerY + maxRadius);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillText("0°", centerX + maxRadius + 15, centerY);
+      ctx.fillText("90°", centerX, centerY - maxRadius - 15);
+      ctx.fillText("180°", centerX - maxRadius - 15, centerY);
+      ctx.fillText("270°", centerX, centerY + maxRadius + 15);
+    }
+
+    function drawPolarPattern(ctx, centerX, centerY, maxRadius, patternData) {
+      ctx.save();
+
+      // En este demo el gradiente es fijo; si quieres, lo hacemos cambiar según viewMode.
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+      gradient.addColorStop(0, "rgba(255,0,0,0.8)");
+      gradient.addColorStop(0.25, "rgba(255,255,0,0.8)");
+      gradient.addColorStop(0.5, "rgba(0,255,0,0.8)");
+      gradient.addColorStop(0.75, "rgba(0,255,255,0.8)");
+      gradient.addColorStop(1, "rgba(0,0,255,0.8)");
+
+      ctx.fillStyle = gradient;
+      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+
+      for (let angle = 0; angle <= 360; angle += 2) {
+        const rad = (angle * Math.PI) / 180;
+        const value = patternData[angle] ?? 0;
+
+        const radius = maxRadius * clamp01(value);
+        const x = centerX + radius * Math.cos(rad);
+        const y = centerY + radius * Math.sin(rad);
+        ctx.lineTo(x, y);
+      }
+
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ========= 3D =========
+    function draw3DPattern(patternData) {
+      const centerX = elements.pattern3DCanvas.width / 2;
+      const centerY = elements.pattern3DCanvas.height / 2;
+      const maxRadius = Math.min(centerX, centerY) - 40;
+
+      clearCanvas(pattern3DCtx, elements.pattern3DCanvas);
+      draw3DAxes(centerX, centerY, maxRadius);
+
+      const thetaSteps = 36;
+      const phiSteps = 18;
+
+      for (let i = 0; i < thetaSteps; i++) {
+        const theta = (i / thetaSteps) * 2 * Math.PI;
+        const thetaNext = ((i + 1) / thetaSteps) * 2 * Math.PI;
+
+        for (let j = 0; j < phiSteps; j++) {
+          const phi = (j / phiSteps) * Math.PI;
+          const phiNext = ((j + 1) / phiSteps) * Math.PI;
+
+          const degT = Math.round((theta * 180 / Math.PI) % 360);
+          const degT2 = Math.round((thetaNext * 180 / Math.PI) % 360);
+
+          const v1 = patternData.azimuth[degT] ?? 0;
+          const v2 = patternData.azimuth[degT2] ?? 0;
+
+          // Elevación por seno (hemisferio)
+          const e1 = Math.sin(phi);
+          const e2 = Math.sin(phiNext);
+
+          const r1 = maxRadius * v1 * e1;
+          const r2 = maxRadius * v2 * e1;
+          const r3 = maxRadius * v1 * e2;
+          const r4 = maxRadius * v2 * e2;
+
+          const p1 = project3DTo2D(r1 * Math.cos(theta),     r1 * Math.sin(theta),     r1 * Math.cos(phi));
+          const p2 = project3DTo2D(r2 * Math.cos(thetaNext), r2 * Math.sin(thetaNext), r2 * Math.cos(phi));
+          const p3 = project3DTo2D(r3 * Math.cos(theta),     r3 * Math.sin(theta),     r3 * Math.cos(phiNext));
+          const p4 = project3DTo2D(r4 * Math.cos(thetaNext), r4 * Math.sin(thetaNext), r4 * Math.cos(phiNext));
+
+          pattern3DCtx.beginPath();
+          pattern3DCtx.moveTo(centerX + p1.x, centerY - p1.y);
+          pattern3DCtx.lineTo(centerX + p2.x, centerY - p2.y);
+          pattern3DCtx.lineTo(centerX + p4.x, centerY - p4.y);
+          pattern3DCtx.lineTo(centerX + p3.x, centerY - p3.y);
+          pattern3DCtx.closePath();
+
+          const intensity = clamp01((v1 + v2) / 2) * clamp01((e1 + e2) / 2);
+          pattern3DCtx.fillStyle = getColorForIntensity(intensity);
+          pattern3DCtx.fill();
+          pattern3DCtx.strokeStyle = "rgba(255,255,255,0.2)";
+          pattern3DCtx.lineWidth = 0.5;
+          pattern3DCtx.stroke();
+        }
+      }
+    }
+
+    function draw3DAxes(centerX, centerY, maxRadius) {
+      pattern3DCtx.strokeStyle = "rgba(255,255,255,0.5)";
+      pattern3DCtx.lineWidth = 1;
+
+      const xEnd = project3DTo2D(maxRadius, 0, 0);
+      pattern3DCtx.beginPath();
+      pattern3DCtx.moveTo(centerX, centerY);
+      pattern3DCtx.lineTo(centerX + xEnd.x, centerY - xEnd.y);
+      pattern3DCtx.stroke();
+
+      const yEnd = project3DTo2D(0, maxRadius, 0);
+      pattern3DCtx.beginPath();
+      pattern3DCtx.moveTo(centerX, centerY);
+      pattern3DCtx.lineTo(centerX + yEnd.x, centerY - yEnd.y);
+      pattern3DCtx.stroke();
+
+      const zEnd = project3DTo2D(0, 0, maxRadius);
+      pattern3DCtx.beginPath();
+      pattern3DCtx.moveTo(centerX, centerY);
+      pattern3DCtx.lineTo(centerX + zEnd.x, centerY - zEnd.y);
+      pattern3DCtx.stroke();
+
+      pattern3DCtx.fillStyle = "rgba(255,255,255,0.7)";
+      pattern3DCtx.font = "12px Arial";
+      pattern3DCtx.fillText("X", centerX + xEnd.x + 10, centerY - xEnd.y);
+      pattern3DCtx.fillText("Y", centerX + yEnd.x + 10, centerY - yEnd.y);
+      pattern3DCtx.fillText("Z", centerX + zEnd.x + 10, centerY - zEnd.y);
+    }
+
+    function project3DTo2D(x, y, z) {
+      const scale = 0.866; // cos(30°)
+      return { x: (x - y) * scale, y: (x + y) * 0.5 - z };
+    }
+
+    function getColorForIntensity(intensity) {
+      const t = clamp01(intensity);
+      let r, g, b;
+
+      if (t < 0.25) {
+        const u = t * 4; r = 0; g = Math.round(255 * u); b = 255;
+      } else if (t < 0.5) {
+        const u = (t - 0.25) * 4; r = 0; g = 255; b = Math.round(255 * (1 - u));
+      } else if (t < 0.75) {
+        const u = (t - 0.5) * 4; r = Math.round(255 * u); g = 255; b = 0;
+      } else {
+        const u = (t - 0.75) * 4; r = 255; g = Math.round(255 * (1 - u)); b = 0;
+      }
+
+      return `rgba(${r},${g},${b},0.7)`;
+    }
+
+    function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+    // ========= Patrones =========
+    function calculateDipolePattern(lengthRatio) {
+      const azimuth = {};
+      const elevation = {};
+
+      for (let a = 0; a <= 360; a++) azimuth[a] = 1.0;
+
+      // elevación: fórmula simplificada + normalización
+      let max = 0;
+      const tmp = [];
+      for (let a = 0; a <= 360; a++) {
+        const theta = (a * Math.PI) / 180;
+        const num = Math.cos(Math.PI * lengthRatio * Math.cos(theta)) - Math.cos(Math.PI * lengthRatio);
+        const den = Math.sin(theta);
+        let v = 0;
+        if (Math.abs(den) > 1e-3) v = Math.abs(num / den);
+        tmp[a] = v;
+        if (v > max) max = v;
+      }
+      max = max || 1;
+      for (let a = 0; a <= 360; a++) elevation[a] = tmp[a] / max;
+
+      return { azimuth, elevation };
+    }
+
+    function calculateMonopolePattern(lengthRatio) {
+      const azimuth = {};
+      const elevation = {};
+
+      for (let a = 0; a <= 360; a++) azimuth[a] = 1.0;
+
+      let max = 0;
+      const tmp = [];
+      for (let a = 0; a <= 360; a++) {
+        const theta = (a * Math.PI) / 180;
+        let v = 0;
+
+        // hemisferio superior
+        if (theta >= 0 && theta <= Math.PI) {
+          const num = Math.cos(Math.PI * lengthRatio * Math.cos(theta)) - Math.cos(Math.PI * lengthRatio);
+          const den = Math.sin(theta);
+          if (Math.abs(den) > 1e-3) v = Math.abs(num / den);
+        }
+
+        tmp[a] = v;
+        if (v > max) max = v;
+      }
+      max = max || 1;
+      for (let a = 0; a <= 360; a++) elevation[a] = tmp[a] / max;
+
+      return { azimuth, elevation };
+    }
+
+    function calculateArrayPattern(spacing, phaseDiffRad) {
+      const azimuth = {};
+      const elevation = {};
+
+      // Nota: esto es “educativo”, no una simulación full-wave.
+      let maxA = 0;
+      let maxE = 0;
+      const tmpA = [];
+      const tmpE = [];
+
+      for (let angle = 0; angle <= 360; angle++) {
+        const theta = (angle * Math.PI) / 180;
+
+        const psiA = 2 * Math.PI * spacing * Math.cos(theta) + phaseDiffRad;
+        const afA = Math.abs(2 * Math.cos(psiA / 2)); // 2-elementos: AF = |2 cos(psi/2)|
+        const epA = Math.abs(Math.sin(theta)); // patrón simple tipo dipolo (máx en 90°)
+        const vA = afA * epA;
+
+        tmpA[angle] = vA;
+        if (vA > maxA) maxA = vA;
+
+        const psiE = 2 * Math.PI * spacing * Math.sin(theta) + phaseDiffRad;
+        const afE = Math.abs(2 * Math.cos(psiE / 2));
+        const epE = Math.abs(Math.sin(theta));
+        const vE = afE * epE;
+
+        tmpE[angle] = vE;
+        if (vE > maxE) maxE = vE;
+      }
+
+      maxA = maxA || 1;
+      maxE = maxE || 1;
+
+      for (let a = 0; a <= 360; a++) {
+        azimuth[a] = tmpA[a] / maxA;
+        elevation[a] = tmpE[a] / maxE;
+      }
+
+      return { azimuth, elevation };
+    }
+
+    function calculateYagiPattern(directors) {
+      const azimuth = {};
+      const elevation = {};
+
+      const directivity = directors * 0.15;
+      const bwA = 180 / (1 + directivity);
+      const bwE = 120 / (1 + directivity);
+
+      for (let a = 0; a <= 360; a++) {
+        const theta = (a * Math.PI) / 180;
+
+        // Azimut: haz al frente (0°)
+        let vA = 0;
+        const nearFront = Math.abs(theta) < (bwA * Math.PI / 180) / 2 || Math.abs(theta - 2*Math.PI) < (bwA * Math.PI / 180) / 2;
+        if (nearFront) {
+          vA = Math.cos((theta * 180 / Math.PI) * Math.PI / bwA);
+          vA = Math.max(0, vA);
+          vA = Math.pow(vA, 1 / (1 + directivity));
+        }
+        const sideA = 0.2 / (1 + directivity);
+        if (vA < sideA) vA = sideA * Math.abs(Math.sin(theta * (2 + directors)));
+        azimuth[a] = vA;
+
+        // Elevación: centrado en 90°
+        let vE = 0;
+        const nearMid = Math.abs(theta - Math.PI/2) < (bwE * Math.PI / 180) / 2;
+        if (nearMid) {
+          vE = Math.cos(((theta - Math.PI/2) * 180 / Math.PI) * Math.PI / bwE);
+          vE = Math.max(0, vE);
+          vE = Math.pow(vE, 1 / (1 + directivity));
+        }
+        const sideE = 0.1 / (1 + directivity);
+        if (vE < sideE) vE = sideE * Math.abs(Math.sin((theta - Math.PI/2) * (2 + directors)));
+        elevation[a] = vE;
+      }
+
+      // Normalizar (importante)
+      const maxA = Math.max(...Object.values(azimuth)) || 1;
+      const maxE = Math.max(...Object.values(elevation)) || 1;
+      for (let a = 0; a <= 360; a++) {
+        azimuth[a] = azimuth[a] / maxA;
+        elevation[a] = elevation[a] / maxE;
+      }
+
+      return { azimuth, elevation };
+    }
+
+    // ========= Parámetros (UI) =========
+    function calculateDipoleParameters() {
+      const L = appState.dipoleLength;
+
+      let gain = 2.15;
+      if (L < 0.5) gain = 2.15 - 3 * (0.5 - L);
+      if (L > 0.5) gain = 2.15 - 2 * (L - 0.5);
+
+      const beamwidth = 78 - 20 * Math.abs(L - 0.5);
+      const fbRatio = 20 + 10 * Math.abs(L - 0.5);
+      const efficiency = 95 - 10 * Math.abs(L - 0.5);
+
+      elements.gainValue.textContent = `${gain.toFixed(2)} dBi`;
+      elements.beamwidthValue.textContent = `${beamwidth.toFixed(0)}°`;
+      elements.fbRatioValue.textContent = `${fbRatio.toFixed(1)} dB`;
+      elements.efficiencyValue.textContent = `${efficiency.toFixed(0)}%`;
+    }
+
+    function calculateMonopoleParameters() {
+      const L = appState.monopoleLength;
+
+      let gain = 5.15;
+      if (L < 0.25) gain = 5.15 - 3 * (0.25 - L);
+      if (L > 0.25) gain = 5.15 - 2 * (L - 0.25);
+
+      const beamwidth = 78 - 20 * Math.abs(L - 0.25);
+      const fbRatio = 30 + 10 * Math.abs(L - 0.25);
+      const efficiency = 95 - 10 * Math.abs(L - 0.25);
+
+      elements.gainValue.textContent = `${gain.toFixed(2)} dBi`;
+      elements.beamwidthValue.textContent = `${beamwidth.toFixed(0)}°`;
+      elements.fbRatioValue.textContent = `${fbRatio.toFixed(1)} dB`;
+      elements.efficiencyValue.textContent = `${efficiency.toFixed(0)}%`;
+    }
+
+    function calculateArrayParameters() {
+      const spacing = appState.elementSpacing;
+      const phase = (appState.phaseDifference * Math.PI) / 180;
+
+      const af = Math.abs(2 * Math.cos(phase / 2)); // simplificado
+      const gain = 2.15 + 10 * Math.log10(Math.max(1e-6, 2 * af));
+
+      const beamwidth = 78 / (1 + spacing);
+      const fbRatio = 20 + 30 * Math.abs(Math.cos(phase));
+      const efficiency = 90 + 5 * Math.abs(Math.cos(phase));
+
+      elements.gainValue.textContent = `${gain.toFixed(2)} dBi`;
+      elements.beamwidthValue.textContent = `${beamwidth.toFixed(0)}°`;
+      elements.fbRatioValue.textContent = `${fbRatio.toFixed(1)} dB`;
+      elements.efficiencyValue.textContent = `${efficiency.toFixed(0)}%`;
+    }
+
+    function calculateYagiParameters() {
+      const d = appState.directorElements;
+
+      const gain = 8 + 2.5 * d;
+      const beamwidth = 78 / (1 + 0.5 * d);
+      const fbRatio = 15 + 5 * d;
+      const efficiency = Math.min(99, 85 + 1.5 * d);
+
+      elements.gainValue.textContent = `${gain.toFixed(2)} dBi`;
+      elements.beamwidthValue.textContent = `${beamwidth.toFixed(0)}°`;
+      elements.fbRatioValue.textContent = `${fbRatio.toFixed(1)} dB`;
+      elements.efficiencyValue.textContent = `${efficiency.toFixed(0)}%`;
+    }
+
+    // ========= Screenshot =========
+    function captureScreenshot() {
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
+
+      tempCanvas.width = 1200;
+      tempCanvas.height = 1000;
+
+      const bg = tempCtx.createLinearGradient(0, 0, 1200, 1000);
+      bg.addColorStop(0, "#0a2463");
+      bg.addColorStop(1, "#000000");
+      tempCtx.fillStyle = bg;
+      tempCtx.fillRect(0, 0, 1200, 1000);
+
+      tempCtx.fillStyle = "#ffffff";
+      tempCtx.font = "bold 24px Arial";
+      tempCtx.textAlign = "center";
+      tempCtx.fillText(`Patrón de Radiación - ${getAntennaTypeName()}`, 600, 40);
+
+      tempCtx.drawImage(elements.azimuthCanvas, 50, 80);
+      tempCtx.drawImage(elements.elevationCanvas, 650, 80);
+      tempCtx.drawImage(elements.pattern3DCanvas, 200, 500);
+
+      tempCtx.fillStyle = "#ffffff";
+      tempCtx.font = "16px Arial";
+      tempCtx.textAlign = "left";
+      tempCtx.fillText("Parámetros:", 50, 950);
+      tempCtx.fillText(`Ganancia: ${elements.gainValue.textContent}`, 200, 950);
+      tempCtx.fillText(`Ancho de Haz: ${elements.beamwidthValue.textContent}`, 400, 950);
+      tempCtx.fillText(`Frente-Espalda: ${elements.fbRatioValue.textContent}`, 600, 950);
+      tempCtx.fillText(`Eficiencia: ${elements.efficiencyValue.textContent}`, 850, 950);
+
+      tempCanvas.toBlob(blob => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `antenna-pattern-${appState.antennaType}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    function getAntennaTypeName() {
+      switch (appState.antennaType) {
+        case "dipole": return "Dipolo Simple";
+        case "monopole": return "Monopolo";
+        case "array": return "Arreglo de Dos Elementos";
+        case "yagi": return "Antena Yagi";
+        default: return "Desconocido";
+      }
+    }
+  </script>
+</body>
+</html>
